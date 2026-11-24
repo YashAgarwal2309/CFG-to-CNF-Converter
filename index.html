@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interactive simulator that converts context-free grammars to Chomsky Normal Form, step by step." />
+    <meta name="theme-color" content="#070b16" />
+    <title>CFG → CNF Converter</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash.
+      try {
+        var t = JSON.parse(localStorage.getItem('cnf.theme.v1') || '"dark"');
+        if (t === 'light') document.documentElement.classList.remove('dark');
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
