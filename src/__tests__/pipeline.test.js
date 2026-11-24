@@ -198,6 +198,33 @@ describe('randomised regression (bounded language comparison)', () => {
   });
 });
 
+describe('randomised regression with larger grammars', () => {
+  // 5 variables, 3 terminals, right-hand sides up to length 4 (more nullable
+  // combinations, longer chains, more unit cycles).
+  it('converts 120 larger random grammars correctly (strings up to length 4)', () => {
+    const random = rng(7);
+    const vars = ['S', 'A', 'B', 'C', 'D'];
+    const terms = ['a', 'b', 'c'];
+    const pick = (list) => list[Math.floor(random() * list.length)];
+    for (let i = 0; i < 120; i += 1) {
+      const lines = vars.map((v) => {
+        const alts = Array.from({ length: 1 + Math.floor(random() * 3) }, () => {
+          const len = Math.floor(random() * 5);
+          if (len === 0) return 'ε';
+          return Array.from({ length: len }, () => (random() < 0.6 ? pick(vars) : pick(terms))).join('');
+        });
+        return `${v} -> ${alts.join(' | ')}`;
+      });
+      const text = lines.join('\n');
+      const grammar = g(text);
+      const result = convertToCnf(grammar);
+      expect(result.ok, text).toBe(true);
+      expect(result.validation.valid, text).toBe(true);
+      expect(compareLanguages(grammar, result.final, 4).equal, text).toBe(true);
+    }
+  });
+});
+
 describe('language tools', () => {
   it('enumerates aⁿbⁿ up to length 6', () => {
     const words = [...enumerateLanguage(g('S -> aSb | ε'), 6)].map(wordToString).sort();
