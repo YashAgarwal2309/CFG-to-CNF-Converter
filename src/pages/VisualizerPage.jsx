@@ -37,13 +37,22 @@ function ProgressTracker({ stages, step, onSelect }) {
         {items.map((item, i) => {
           const active = i === step;
           const done = i < step;
+          // The final stage is a check, not a transformation: show its verdict
+          // instead of "no change".
+          const isValidation = item.id === 'validate';
+          const verdict = isValidation ? (item.details?.validation?.valid ? 'passed' : 'failed') : null;
+          const note = isValidation
+            ? `validation ${verdict}`
+            : item.applied === false
+              ? 'no change'
+              : null;
           return (
             <li key={item.id}>
               <button
                 type="button"
                 onClick={() => onSelect(i)}
                 aria-current={active ? 'step' : undefined}
-                aria-label={`${i === 0 ? 'Input' : `Stage ${i}`}: ${item.title}${item.applied === false ? ' (no change)' : ''}`}
+                aria-label={`${i === 0 ? 'Input' : `Stage ${i}`}: ${item.title}${note ? ` (${note})` : ''}`}
                 className={cx(
                   'flex w-full flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center transition',
                   active
@@ -64,7 +73,16 @@ function ProgressTracker({ stages, step, onSelect }) {
                 <span className={cx('text-[10px] font-semibold tracking-wide', active ? 'text-accent' : 'text-muted')}>
                   {item.short}
                 </span>
-                {item.applied === false && <span className="text-[9px] text-subtle">no change</span>}
+                {note && (
+                  <span
+                    className={cx(
+                      'text-[9px]',
+                      isValidation ? (verdict === 'passed' ? 'font-semibold text-success' : 'font-semibold text-danger') : 'text-subtle',
+                    )}
+                  >
+                    {isValidation ? (verdict === 'passed' ? '✓ check passed' : '✗ check failed') : note}
+                  </span>
+                )}
               </button>
             </li>
           );

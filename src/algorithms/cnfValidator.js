@@ -15,35 +15,51 @@ import { EPSILON, nonTerminalSet } from './grammar.js';
 import { computeGenerating, computeReachable } from './grammarAnalysis.js';
 import { fmtProd, fmtSet } from './format.js';
 
+/** Comma-separated list with set membership, e.g. "A, B ∈ V". */
+const inSet = (symbols, set) => `${symbols.join(', ')} ∈ ${set}`;
+
+/**
+ * Classify one production against the CNF definition and give the exact
+ * mathematical reason. Forms: 'A → BC', 'A → a', 'S → ε' (valid) and
+ * 'epsilon', 'unit', 'mixed', 'long', 'invalid' (violations).
+ */
 export function classifyCnfRule(production, grammar, nts = nonTerminalSet(grammar), startOnRhs) {
   const { lhs, rhs } = production;
-  const onRhs =
-    startOnRhs ?? grammar.productions.some((p) => p.rhs.includes(grammar.start));
+  const S = grammar.start;
+  const onRhs = startOnRhs ?? grammar.productions.some((p) => p.rhs.includes(S));
   if (!nts.has(lhs)) {
-    return { valid: false, form: 'invalid', reason: `Left-hand side ${lhs} is not a variable.` };
+    return { valid: false, form: 'invalid', reason: `Left-hand side ${lhs} is not a variable (${lhs} ∉ V).` };
   }
   if (rhs.length === 0) {
-    if (lhs !== grammar.start) {
+    if (lhs !== S) {
       return {
         valid: false,
         form: 'epsilon',
-        reason: `ε-production for ${lhs}; only the start symbol may derive ε directly.`,
+        reason: `ε-production for ${lhs}; only the start symbol may derive ε directly, and ${lhs} ≠ ${S}.`,
       };
     }
     if (onRhs) {
       return {
         valid: false,
         form: 'epsilon',
-        reason: `${lhs} → ε is only allowed when the start symbol ${lhs} does not appear on any right-hand side.`,
+        reason: `${lhs} → ε is only allowed when the start symbol ${lhs} does not appear on any right-hand side, but ${lhs} does.`,
       };
     }
-    return { valid: true, form: 'S → ε', reason: 'Permitted start-symbol ε-rule (S does not appear on any right-hand side).' };
+    return {
+      valid: true,
+      form: 'S → ε',
+      reason: `Start-symbol exception: ${S} → ε is permitted because ${S} is the start symbol and appears on no right-hand side.`,
+    };
   }
   if (rhs.length === 1) {
     if (nts.has(rhs[0])) {
-      return { valid: false, form: 'unit', reason: `Unit production: ${lhs} → ${rhs[0]} has a single variable on the right.` };
+      return {
+        valid: false,
+        form: 'unit',
+        reason: `Unit production: the right-hand side is a single variable (${inSet([rhs[0]], 'V')}); CNF needs exactly two variables or one terminal.`,
+      };
     }
-    return { valid: true, form: 'A → a', reason: `A single terminal (${rhs[0]}).` };
+    return { valid: true, form: 'A → a', reason: `Form A → a: a single terminal, ${inSet([rhs[0]], 'Σ')}.` };
   }
   if (rhs.length === 2) {
     const terminals = rhs.filter((s) => !nts.has(s));
@@ -51,10 +67,10 @@ export function classifyCnfRule(production, grammar, nts = nonTerminalSet(gramma
       return {
         valid: false,
         form: 'mixed',
-        reason: `Terminal ${terminals.join(', ')} mixed into a two-symbol right-hand side; it must be replaced by a variable.`,
+        reason: `Terminal ${terminals.join(', ')} mixed into a two-symbol right-hand side (${inSet(terminals, 'Σ')}); form A → BC requires both symbols to be variables.`,
       };
     }
-    return { valid: true, form: 'A → BC', reason: 'Exactly two variables.' };
+    return { valid: true, form: 'A → BC', reason: `Form A → BC: exactly two variables, ${inSet(rhs, 'V')}.` };
   }
   const terminals = rhs.filter((s) => !nts.has(s));
   return {
@@ -71,6 +87,10 @@ export function classifyCnfRule(production, grammar, nts = nonTerminalSet(gramma
  * @param {object} grammar
  * @param {object} [options]
  * @param {boolean} [options.expectEpsilon] whether the ORIGINAL grammar generates ε
+ * @param {boolean} [options.uselessIsError=true] treat useless symbols as a failure.
+ *   The definition of CNF only restricts the shape of rules, so a grammar with
+ *   useless symbols can still be in CNF; with `false` the check is reported as
+ *   an advisory (severity 'warning') and does not affect `valid`.
  */
 export function validateCnf(grammar, options = {}) {
   const nts = nonTerminalSet(grammar);
@@ -93,7 +113,8 @@ export function validateCnf(grammar, options = {}) {
 
   const hasStartEpsilon = grammar.productions.some((p) => p.lhs === grammar.start && p.rhs.length === 0);
   const checks = [];
-  const add = (id, label, passed, detail) => checks.push({ id, label, passed, detail });
+  const add = (id, label, passed, detail, severity = 'error') => checks.push({ id, label, passed, detail, severity });
+  const uselessIsError = options.uselessIsError !== false;
 
   const invalid = rules.filter((r) => !r.valid);
   const byForm = (form) => invalid.filter((r) => r.form === form);
@@ -134,9 +155,10 @@ export function validateCnf(grammar, options = {}) {
   );
   add(
     'useless',
-    'No useless symbols',
+    uselessIsError ? 'No useless symbols' : 'No useless symbols (advisory — not part of the CNF definition)',
     uselessSymbols.length === 0,
     uselessSymbols.length ? `Useless: ${fmtSet(uselessSymbols)}` : 'Every variable is generating and reachable.',
+    uselessIsError ? 'error' : 'warning',
   );
   if (typeof options.expectEpsilon === 'boolean') {
     add(
@@ -153,7 +175,9 @@ export function validateCnf(grammar, options = {}) {
     );
   }
 
-  const valid = checks.every((c) => c.passed) && invalid.length === 0;
+  const failedChecks = checks.filter((c) => !c.passed && c.severity === 'error');
+  const warnings = checks.filter((c) => !c.passed && c.severity === 'warning');
+  const valid = failedChecks.length === 0 && invalid.length === 0;
   return {
     valid,
     totalRules: rules.length,
@@ -164,12 +188,22 @@ export function validateCnf(grammar, options = {}) {
     uselessSymbols,
     isEmptyLanguage,
     hasStartEpsilon,
+    warnings,
     summary: valid
       ? isEmptyLanguage
         ? 'Valid CNF (vacuously): the grammar has no productions and generates the empty language ∅.'
         : `Valid CNF: all ${rules.length} productions have the form A → BC, A → a${hasStartEpsilon ? `, or ${grammar.start} → ε` : ''}.`
-      : `Not in CNF: ${invalid.length} invalid production${invalid.length === 1 ? '' : 's'}, ${checks.filter((c) => !c.passed).length} failed check${checks.filter((c) => !c.passed).length === 1 ? '' : 's'}.`,
+      : `Not in CNF: ${invalid.length} invalid production${invalid.length === 1 ? '' : 's'}, ${failedChecks.length} failed check${failedChecks.length === 1 ? '' : 's'}.`,
   };
+}
+
+/**
+ * Check whether a user's grammar is ALREADY in CNF, without converting it.
+ * Uses the same rule-by-rule classification as the final validation, but
+ * reports useless symbols as an advisory (they do not violate the definition).
+ */
+export function checkAlreadyCnf(grammar) {
+  return validateCnf(grammar, { uselessIsError: false });
 }
 
 /** Quick boolean helper. */

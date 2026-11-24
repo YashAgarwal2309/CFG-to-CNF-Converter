@@ -14,6 +14,7 @@ import {
   Plus,
   Rows3,
   Save,
+  ListChecks,
   ShieldCheck,
   TextCursorInput,
   Trash2,
@@ -37,6 +38,7 @@ import {
 import { Badge, Button, Card, CardHeader, ConfirmDialog, Field, Modal, PageHeader, Tabs, cx } from '../components/ui/primitives.jsx';
 import { GrammarTuple, GrammarView } from '../components/grammar/GrammarView.jsx';
 import { GrammarStats } from '../components/grammar/GrammarStats.jsx';
+import { CnfCheckDialog } from '../components/grammar/CnfCheckDialog.jsx';
 
 function RuleRows({ text, onChange, errorLines }) {
   const rows = useMemo(() => textToRows(text), [text]);
@@ -163,6 +165,7 @@ export default function EditorPage() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
+  const [cnfCheckOpen, setCnfCheckOpen] = useState(false);
   const fileRef = useRef(null);
 
   const errorLines = useMemo(() => new Set(parsed.errors.map((e) => e.line).filter(Boolean)), [parsed.errors]);
@@ -234,6 +237,15 @@ export default function EditorPage() {
           <>
             <Button variant="secondary" icon={ShieldCheck} onClick={validate}>
               Validate
+            </Button>
+            <Button
+              variant="secondary"
+              icon={ListChecks}
+              onClick={() => setCnfCheckOpen(true)}
+              disabled={!parsed.ok}
+              title={parsed.ok ? 'Check the grammar against the CNF definition without converting it' : 'Fix the syntax errors first'}
+            >
+              Check if Already in CNF
             </Button>
             <Button variant="primary" icon={Workflow} onClick={convert} disabled={!parsed.ok}>
               Convert to CNF
@@ -414,6 +426,15 @@ export default function EditorPage() {
             <Button variant="primary" className="mt-5 w-full justify-center" icon={Workflow} onClick={convert} disabled={!parsed.ok}>
               Convert to Chomsky Normal Form
             </Button>
+            <Button
+              variant="secondary"
+              className="mt-2 w-full justify-center"
+              icon={ListChecks}
+              onClick={() => setCnfCheckOpen(true)}
+              disabled={!parsed.ok}
+            >
+              Check if already in CNF (no conversion)
+            </Button>
           </Card>
 
           <Card className="card-pad">
@@ -445,6 +466,15 @@ export default function EditorPage() {
         </div>
       </div>
 
+      <CnfCheckDialog
+        open={cnfCheckOpen && parsed.ok}
+        grammar={parsed.ok ? parsed.grammar : null}
+        onClose={() => setCnfCheckOpen(false)}
+        onConvert={() => {
+          setCnfCheckOpen(false);
+          convert();
+        }}
+      />
       <ConfirmDialog
         open={confirmClear}
         title="Clear the editor?"

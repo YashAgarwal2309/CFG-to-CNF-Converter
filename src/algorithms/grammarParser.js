@@ -333,6 +333,11 @@ export function parseGrammar(text, options = {}) {
     }
   }
 
+  // Report problems in source order: by line number, then messages that are
+  // not tied to a line (declarations, start symbol, whole-grammar warnings).
+  sortByLine(errors);
+  sortByLine(warnings);
+
   if (errors.length) return { ok: false, grammar: null, errors, warnings, rules };
 
   const grammar = createGrammar({
@@ -342,6 +347,13 @@ export function parseGrammar(text, options = {}) {
     productions,
   });
   return { ok: true, grammar, errors, warnings, rules };
+}
+
+/** Stable in-place sort by line number; entries without a line go last. */
+export function sortByLine(list) {
+  const key = (entry) => (typeof entry.line === 'number' ? entry.line : Number.POSITIVE_INFINITY);
+  list.sort((a, b) => key(a) - key(b));
+  return list;
 }
 
 /** Parse and throw on error — convenient for tests and samples. */

@@ -187,6 +187,26 @@ describe('grammar parser — errors', () => {
   });
 });
 
+describe('grammar parser — error ordering', () => {
+  it('sorts errors by line number regardless of detection order', () => {
+    // Detected in the order 2, 3, 1, 4 (arrow/LHS problems are found before RHS problems).
+    const r = parseGrammar("S → AB | a |\nA aA | ε\na B → b\nC → 'x");
+    expect(r.ok).toBe(false);
+    expect(r.errors.map((e) => e.line)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('places errors that are not tied to a line after line errors', () => {
+    const r = parseGrammar('S -> a |\nA -> b', { terminals: 'x', nonTerminals: 'x' });
+    expect(r.errors.map((e) => e.line)).toEqual([1, null]);
+  });
+
+  it('sorts warnings by line number too', () => {
+    const r = parseGrammar('S -> a | a\nA -> b\nS -> aεb\nA -> b');
+    const lines = r.warnings.map((w) => w.line);
+    expect(lines).toEqual([...lines].sort((x, y) => (x ?? Infinity) - (y ?? Infinity)));
+  });
+});
+
 describe('serializer round trip', () => {
   it.each(SAMPLE_GRAMMARS.map((s) => [s.id, s]))('re-parses %s identically', (_, sample) => {
     const grammar = g(sample.text, { start: sample.start });

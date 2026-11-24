@@ -49,6 +49,12 @@ context-free languages.
   without productions, empty language)
 - Optional declarations of start symbol, variables and terminals; formatted preview and the tuple G = (V, Σ, R, S)
 - Statistics: variables, terminals, productions, nullable variables, unit productions, useless symbols
+- **Check if Already in CNF**: validates the grammar exactly as written, without converting it. Every production is
+  listed as valid or invalid with its exact reason (e.g. *“Form A → BC: exactly two variables, A, B ∈ V”*,
+  *“ε-production for A; only the start symbol may derive ε directly, and A ≠ S”*). The start-symbol exception
+  S → ε is accepted only when S appears on no right-hand side. Useless symbols are reported as an advisory, because
+  the CNF definition only restricts rule shapes.
+- Parser errors and warnings are listed in line order
 - Load samples, save to the library, import TXT/JSON, export TXT/JSON, copy
 
 **CNF Converter**
@@ -62,7 +68,7 @@ context-free languages.
 - **Bounded language check** comparing all strings up to a chosen length (clearly labelled as evidence, not proof)
 
 **Step Visualizer**
-- Progress tracker; Previous, Next, Play, Pause and Reset controls; keyboard navigation
+- Progress tracker (transformation stages show “no change” when skipped; the final stage shows the validation verdict); Previous, Next, Play, Pause and Reset controls; keyboard navigation
 - For each stage: number, title, theory, transformation summary, the computed sets (nullable rounds, unit closures,
   generating/reachable sets, terminal variables, binary chains), and an ordered step log
 - **Side-by-side** and **unified** before/after views with consistent colours: added (green), removed (red),
@@ -249,21 +255,23 @@ src/
 npm test
 ```
 
-The suite (about 200 tests) covers:
+The suite (218 tests) covers:
 
 - **Parser**: every notation, tokenizer rules (multi-character names, quoted terminals, `0S1`, subscripts),
   syntax errors with line numbers, warnings, and serializer round trips for every sample
 - **Each algorithm on its own**: fixed points, subset expansion, unit cycles, the order of useless-symbol removal,
   terminal reuse, chain sharing, name collisions and immutability. Every stage's recorded changes must match the
   real diff.
-- **Validator**: each invalid form with its reason, the start-symbol ε rules, useless symbols, ε-membership
+- **Validator**: each invalid form with its reason, the start-symbol ε rules, useless symbols (strict for the
+  pipeline, advisory for the editor's “already in CNF” check), ε-membership
 - **Pipeline**: all 15 required edge cases (empty language, ε-only language, start on the right-hand side, unit
   cycles, collisions with `S₀`/`T_a`/`X₁`, invalid syntax, …) plus the huge-expansion guard
 - **Language preservation**: every sample, the edge cases and **270 random grammars** are compared with their CNF
   on all strings up to a length bound; CYK is checked against enumeration
 - **Quiz**: answer keys verified by the engine
-- **UI** (React Testing Library): navigation, theme, live errors, conversion, stepping, stale detection, library
-  CRUD, corrupted storage, import/export
+- **UI** (React Testing Library): navigation, theme, live errors (in line order), the “Check if Already in CNF”
+  dialog, conversion, stepping, the validation stage in the progress tracker, stale detection, library CRUD,
+  corrupted storage, import/export
 
 > **Note on language preservation.** Comparing languages up to a length bound is strong evidence, **not** a proof of
 > equivalence (CFG equivalence is undecidable in general). Correctness rests on each stage being a standard

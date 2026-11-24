@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ShieldAlert, ShieldCheck, XCircle } from 'lucide-react';
 import { productionKey } from '../../algorithms/grammar.js';
 import { Badge, Tabs, cx } from '../ui/primitives.jsx';
 import { RhsText, SymbolText } from './GrammarView.jsx';
@@ -49,25 +49,30 @@ export function ValidationReport({ validation, grammar }) {
       </div>
 
       <ul className="grid gap-2 md:grid-cols-2">
-        {validation.checks.map((c) => (
-          <li
-            key={c.id}
-            className={cx(
-              'flex items-start gap-3 rounded-xl border px-4 py-3',
-              c.passed ? 'border-line bg-surface-2/40' : 'border-danger/40 bg-danger/[0.06]',
-            )}
-          >
-            {c.passed ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-label="Passed" />
-            ) : (
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-label="Failed" />
-            )}
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-fg">{c.label}</p>
-              <p className="mt-0.5 break-words text-xs text-muted">{c.detail}</p>
-            </div>
-          </li>
-        ))}
+        {validation.checks.map((c) => {
+          const advisory = !c.passed && c.severity === 'warning';
+          return (
+            <li
+              key={c.id}
+              className={cx(
+                'flex items-start gap-3 rounded-xl border px-4 py-3',
+                c.passed ? 'border-line bg-surface-2/40' : advisory ? 'border-warn/40 bg-warn/[0.06]' : 'border-danger/40 bg-danger/[0.06]',
+              )}
+            >
+              {c.passed ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-label="Passed" />
+              ) : advisory ? (
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-label="Advisory" />
+              ) : (
+                <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-label="Failed" />
+              )}
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-fg">{c.label}</p>
+                <p className="mt-0.5 break-words text-xs text-muted">{c.detail}</p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       {validation.rules.length > 0 && (
