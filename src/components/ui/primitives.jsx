@@ -185,11 +185,15 @@ export function Tooltip({ content, children, side = 'top', className }) {
 export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
   const panelRef = useRef(null);
   const titleId = useId();
+  // Keep the latest onClose in a ref so the effect below only runs when the
+  // dialog opens or closes (not on every parent re-render while typing).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!open) return undefined;
     const previous = document.activeElement;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
       if (e.key === 'Tab' && panelRef.current) {
         const focusables = panelRef.current.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -207,13 +211,13 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
       }
     };
     document.addEventListener('keydown', onKey);
-    const t = setTimeout(() => panelRef.current?.querySelector('[data-autofocus], button, input')?.focus(), 30);
+    const t = setTimeout(() => panelRef.current?.querySelector('[data-autofocus], input, button')?.focus(), 30);
     return () => {
       document.removeEventListener('keydown', onKey);
       clearTimeout(t);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   const width = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }[size];
   return (

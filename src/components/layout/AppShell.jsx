@@ -335,6 +335,8 @@ export function AppShell({ children }) {
   useEffect(() => {
     const label = NAV_ITEMS.find((n) => n.id === route)?.label ?? '';
     document.title = `${label} · CFG → CNF Converter`;
+    // Start every page at the top (also for back/forward and direct links).
+    window.scrollTo(0, 0);
   }, [route]);
 
   return (
@@ -349,17 +351,17 @@ export function AppShell({ children }) {
       <div className="lg:pl-64">
         <TopBar onMenu={() => setMenuOpen(true)} onReset={() => setConfirmReset(true)} />
         <main id="main-content" className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={route}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          {/* Enter-only page transition. An exit animation (AnimatePresence
+              mode="wait") can leave a stale page instance on screen when the
+              browser pauses animation frames, e.g. in a background tab. */}
+          <motion.div
+            key={route}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            {children}
+          </motion.div>
         </main>
         <footer className="border-t border-line/60 px-4 py-6 text-center text-xs text-subtle sm:px-8">
           CFG → CNF Converter · An Automata Theory &amp; Formal Languages project · Runs entirely in your browser

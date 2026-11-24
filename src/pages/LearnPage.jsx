@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowRight,
   BookOpen,
@@ -205,8 +205,7 @@ function Quiz() {
       <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
         <div className="h-full bg-gradient-to-r from-accent to-violet transition-all" style={{ width: `${(index / order.length) * 100}%` }} />
       </div>
-      <AnimatePresence mode="wait">
-        <motion.div key={q.id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+      <motion.div key={q.id} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}>
           <p className="mb-4 text-base font-semibold text-fg" id={`q-${q.id}`}>
             {q.question}
           </p>
@@ -259,8 +258,7 @@ function Quiz() {
               {index + 1 >= order.length ? 'See results' : 'Next question'}
             </Button>
           </div>
-        </motion.div>
-      </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

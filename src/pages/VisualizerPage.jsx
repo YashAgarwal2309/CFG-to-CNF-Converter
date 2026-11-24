@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   AlertTriangle,
   Check,
@@ -269,12 +269,11 @@ export default function VisualizerPage() {
             </div>
           </Card>
 
-          <AnimatePresence mode="wait">
+          {/* Enter-only transition: keeps working while autoplay runs in a background tab. */}
             <motion.div
               key={step}
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
               transition={{ duration: 0.22 }}
             >
               <Card className="card-pad">
@@ -297,7 +296,6 @@ export default function VisualizerPage() {
                 {step === 0 ? <InputStep result={result} /> : <StageDetail stage={stage} />}
               </Card>
             </motion.div>
-          </AnimatePresence>
         </>
       )}
     </div>

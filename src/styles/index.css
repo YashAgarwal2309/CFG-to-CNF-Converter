@@ -51,6 +51,11 @@
     @apply bg-canvas text-fg font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
   }
+  /* Grid items must be allowed to shrink below their content width, so wide
+     tables and code blocks scroll inside their panel instead of the page. */
+  .grid > * {
+    min-width: 0;
+  }
   ::selection {
     background: rgb(var(--accent) / 0.3);
   }
