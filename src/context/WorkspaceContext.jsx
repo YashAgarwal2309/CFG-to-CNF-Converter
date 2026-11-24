@@ -151,18 +151,25 @@ export function WorkspaceProvider({ children }) {
 
   const isStale = !!conversion && conversion.key !== sourceKey(workspace);
 
+  /**
+   * Convert the workspace grammar — or an explicit `source` (which is also
+   * loaded into the editor) — and store the immutable result.
+   */
   const runConversion = useCallback(
-    ({ silent = false } = {}) => {
-      if (!parsed.ok) {
+    ({ silent = false, source: explicit = null, savedId = null } = {}) => {
+      const src = explicit ? { ...normalizeSource(explicit), savedId } : workspace;
+      const srcParsed = explicit ? parseSource(src) : parsed;
+      if (explicit) setWorkspace(src);
+      if (!srcParsed.ok) {
         if (!silent) notify('Fix the grammar errors before converting.', 'error');
         return null;
       }
       let next;
       try {
         next = {
-          source: { ...workspace },
-          key: sourceKey(workspace),
-          result: convertToCnf(parsed.grammar),
+          source: { ...src },
+          key: sourceKey(src),
+          result: convertToCnf(srcParsed.grammar),
           ranAt: new Date().toISOString(),
         };
       } catch (error) {
@@ -172,11 +179,11 @@ export function WorkspaceProvider({ children }) {
       setConversion(next);
       setVisualizerStep(0);
       writeJSON(STORAGE_KEYS.conversion, {
-        name: workspace.name,
-        text: workspace.text,
-        start: workspace.start,
-        nonTerminals: workspace.nonTerminals,
-        terminals: workspace.terminals,
+        name: src.name,
+        text: src.text,
+        start: src.start,
+        nonTerminals: src.nonTerminals,
+        terminals: src.terminals,
       });
       const { result } = next;
       const valid = result.ok && result.validation.valid;
@@ -187,19 +194,19 @@ export function WorkspaceProvider({ children }) {
         variablesIntroduced: s.variablesIntroduced + (result.ok ? result.introduced.length : 0),
       }));
       const entry = {
-        name: workspace.name,
-        text: workspace.text,
-        start: workspace.start,
-        nonTerminals: workspace.nonTerminals,
-        terminals: workspace.terminals,
+        name: src.name,
+        text: src.text,
+        start: src.start,
+        nonTerminals: src.nonTerminals,
+        terminals: src.terminals,
         at: next.ranAt,
         valid,
       };
       setRecent((list) => [entry, ...list.filter((r) => sourceKey(r) !== next.key)].slice(0, 8));
-      if (workspace.savedId) {
+      if (src.savedId) {
         const summary = summarizeConversion(result);
         setLibrary((lib) =>
-          lib.map((g) => (g.id === workspace.savedId ? { ...g, history: [summary, ...g.history].slice(0, 25) } : g)),
+          lib.map((g) => (g.id === src.savedId ? { ...g, history: [summary, ...g.history].slice(0, 25) } : g)),
         );
       }
       if (!silent) {
